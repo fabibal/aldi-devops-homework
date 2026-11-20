@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}   # was: myapp
+
+spec:
+  replicas: {{ .Values.replicaCount }}   # was: 1
+
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}   # was: myapp
+
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}   # was: myapp
+    spec:
+      containers:
+        - name: myapp
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}   # new
+
+          ports:
+            - containerPort: {{ .Values.service.port }}   # was: 5000
+
+          env:
+            - name: ENVIRONMENT
+              value: "{{ .Values.environment }}"
+
+          readinessProbe:   # new
+            httpGet:
+              path: /health
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 2
+            periodSeconds: 5
+
+          livenessProbe:   # new
+            httpGet:
+              path: /health
+              port: {{ .Values.service.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          resources:   # new
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi

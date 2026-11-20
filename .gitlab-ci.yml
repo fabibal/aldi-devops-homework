@@ -1,0 +1,33 @@
+stages:
+  - validate   # new
+  - build
+  - deploy
+
+variables:   # new
+  TF_STATE: /var/lib/gitlab-runner-tfstate/terraform.tfstate
+
+helm-lint:   # new
+  stage: validate
+  script:
+    - helm lint helm/
+
+terraform-validate:   # new
+  stage: validate
+  script:
+    - terraform -chdir=terraform fmt -check
+    - terraform -chdir=terraform init -backend=false
+    - terraform -chdir=terraform validate
+
+build-image:   # was: build
+  stage: build
+  script:
+    - docker build -t myapp:$CI_COMMIT_SHORT_SHA app/   # was: echo "Building the application..."
+    - kind load docker-image myapp:$CI_COMMIT_SHORT_SHA --name homework   # new
+
+deploy:
+  stage: deploy
+  rules:   # new
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - terraform -chdir=terraform init   # was: echo "Deploying the application..."
+    - terraform -chdir=terraform apply -auto-approve -state=$TF_STATE -var image_tag=$CI_COMMIT_SHORT_SHA   # new
